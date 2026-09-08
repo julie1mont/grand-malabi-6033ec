@@ -255,8 +255,8 @@
 
   <footer id="cl-footer">
     <div class="wrap row">
-      <div class="mono">Digital Wawa — powered by Cutline</div>
-      <div class="mono">Browse · Sell · Formats: SVG, PNG, DXF, EPS, PDF</div>
+      <div class="mono">Digital Wawa</div>
+      <div class="mono">Cut files · Templates · SVG, PNG, DXF, EPS, PDF</div>
     </div>
   </footer>
 
@@ -282,22 +282,22 @@
   const supabase = supabaseReady ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
   const seed = [
-    {id:'s1', title:'Wildflower heart bouquet', category:'SVGs', price:4.50, formats:['SVG','PNG','DXF','EPS'], creator:'Maple & Fern Studio', sales:842, pat:0, desc:'A layered floral heart made from hand-drawn wildflowers. Cuts cleanly on vinyl, cardstock, or fabric — sized for a standard 12x12 mat.'},
-    {id:'s2', title:'Sitting bear line art', category:'Illustrations', price:3.00, formats:['SVG','PNG','PDF'], creator:'Northline Co', sales:1290, pat:6, desc:'Minimal single-line bear illustration, great for nursery prints, onesies, or engraving.'},
-    {id:'s3', title:'Holiday shipping label trio', category:'Templates', price:5.00, formats:['PNG','PDF'], creator:'Pickled Thistle', sales:2110, pat:2, desc:'Three editable "North Pole" shipping labels with fillable delivery fields — print at home, no cutting required.'},
-    {id:'s4', title:'Bitchcraft script wordmark', category:'Clipart', price:3.50, formats:['SVG','PNG','DXF','EPS'], creator:'Pickled Thistle', sales:640, pat:8, desc:'A bold script wordmark with a bat accent. Works well on dark or light apparel.'},
-    {id:'s5', title:'Christmas tree silhouette', category:'SVGs', price:2.50, formats:['SVG','PNG','DXF'], creator:'Northline Co', sales:955, pat:4, desc:'A clean single-layer tree silhouette, ready to cut for ornaments or window clings.'},
-    {id:'s6', title:'Blessed & faith monogram frames', category:'Clipart', price:4.00, formats:['SVG','PNG'], creator:'Maple & Fern Studio', sales:410, pat:9, desc:'Two decorative script frames for monogramming — pair with any single letter font.'},
-    {id:'s7', title:'Winter berries seamless pattern', category:'Patterns', price:6.00, formats:['PNG','PDF'], creator:'Foxglove Paper Co', sales:301, pat:3, desc:'A tileable winter berry print, 300dpi, ready for sublimation or fabric printing.'},
-    {id:'s8', title:'Faux leather floral sheet', category:'Sublimation', price:3.75, formats:['PNG','PDF'], creator:'Foxglove Paper Co', sales:528, pat:5, desc:'Printable faux-leather texture with a soft floral overlay, sized for earring blanks.'},
-    {id:'s9', title:'Gingham picnic border', category:'Patterns', price:2.00, formats:['SVG','PNG'], creator:'Foxglove Paper Co', sales:190, pat:1, desc:'A classic gingham border strip for cards, labels, and packaging.'},
-    {id:'s10', title:'Autumn leaves heart set', category:'SVGs', price:4.50, formats:['SVG','PNG','DXF','EPS','PDF'], creator:'Maple & Fern Studio', sales:1780, pat:7, desc:'Four layered leaf-heart designs for fall tees and totes, tested on 100% cotton.'},
-    {id:'s11', title:'Snowflake grid clipart', category:'Illustrations', price:2.25, formats:['SVG','PNG'], creator:'Northline Co', sales:266, pat:0, desc:'A set of six geometric snowflakes, evenly weighted for small-scale cutting.'},
-    {id:'s12', title:'Coffee shop rubber stamp set', category:'Templates', price:3.25, formats:['SVG','PNG','PDF'], creator:'Foxglove Paper Co', sales:174, pat:6, desc:'Four faux-stamp graphics for packaging and stickers.'},
+    {id:'s1', title:'Wildflower heart bouquet', category:'SVGs', price:4.50, formats:['SVG','PNG','DXF','EPS'], creator:'Digital Wawa', sales:842, pat:0, desc:'A layered floral heart made from hand-drawn wildflowers. Cuts cleanly on vinyl, cardstock, or fabric — sized for a standard 12x12 mat.'},
+    {id:'s2', title:'Sitting bear line art', category:'Illustrations', price:3.00, formats:['SVG','PNG','PDF'], creator:'Digital Wawa', sales:1290, pat:6, desc:'Minimal single-line bear illustration, great for nursery prints, onesies, or engraving.'},
+    {id:'s3', title:'Holiday shipping label trio', category:'Templates', price:5.00, formats:['PNG','PDF'], creator:'Digital Wawa', sales:2110, pat:2, desc:'Three editable "North Pole" shipping labels with fillable delivery fields — print at home, no cutting required.'},
+    {id:'s4', title:'Bitchcraft script wordmark', category:'Clipart', price:3.50, formats:['SVG','PNG','DXF','EPS'], creator:'Digital Wawa', sales:640, pat:8, desc:'A bold script wordmark with a bat accent. Works well on dark or light apparel.'},
+    {id:'s5', title:'Christmas tree silhouette', category:'SVGs', price:2.50, formats:['SVG','PNG','DXF'], creator:'Digital Wawa', sales:955, pat:4, desc:'A clean single-layer tree silhouette, ready to cut for ornaments or window clings.'},
+    {id:'s6', title:'Blessed & faith monogram frames', category:'Clipart', price:4.00, formats:['SVG','PNG'], creator:'Digital Wawa', sales:410, pat:9, desc:'Two decorative script frames for monogramming — pair with any single letter font.'},
+    {id:'s7', title:'Winter berries seamless pattern', category:'Patterns', price:6.00, formats:['PNG','PDF'], creator:'Digital Wawa', sales:301, pat:3, desc:'A tileable winter berry print, 300dpi, ready for sublimation or fabric printing.'},
+    {id:'s8', title:'Faux leather floral sheet', category:'Sublimation', price:3.75, formats:['PNG','PDF'], creator:'Digital Wawa', sales:528, pat:5, desc:'Printable faux-leather texture with a soft floral overlay, sized for earring blanks.'},
+    {id:'s9', title:'Gingham picnic border', category:'Patterns', price:2.00, formats:['SVG','PNG'], creator:'Digital Wawa', sales:190, pat:1, desc:'A classic gingham border strip for cards, labels, and packaging.'},
+    {id:'s10', title:'Autumn leaves heart set', category:'SVGs', price:4.50, formats:['SVG','PNG','DXF','EPS','PDF'], creator:'Digital Wawa', sales:1780, pat:7, desc:'Four layered leaf-heart designs for fall tees and totes, tested on 100% cotton.'},
+    {id:'s11', title:'Snowflake grid clipart', category:'Illustrations', price:2.25, formats:['SVG','PNG'], creator:'Digital Wawa', sales:266, pat:0, desc:'A set of six geometric snowflakes, evenly weighted for small-scale cutting.'},
+    {id:'s12', title:'Coffee shop rubber stamp set', category:'Templates', price:3.25, formats:['SVG','PNG','PDF'], creator:'Digital Wawa', sales:174, pat:6, desc:'Four faux-stamp graphics for packaging and stickers.'},
   ];
   const categories = ['All','SVGs','Illustrations','Templates','Clipart','Sublimation','Patterns'];
 
-  let state = { view:'browse', activeCategory:'All', search:'', productId:null, userListings:[], cart:{}, cartOpen:false, session:null, authError:'' };
+  let state = { view:'browse', activeCategory:'All', search:'', productId:null, userListings:[], cart:{}, cartOpen:false, session:null, authError:'', resetMessage:'', resetError:'' };
 
   const $ = sel => document.querySelector(sel);
   const main = $('#cl-main');
@@ -388,8 +388,8 @@
       <section id="cl-hero" class="grid-bg">
         <div class="wrap hero-inner">
           <div>
-            <h1 class="display">Cut files, fonts, and templates<br>made by working crafters.</h1>
-            <p class="sub">Buy ready-to-cut designs for Cricut, Silhouette, and print — or list your own and get paid when they sell.</p>
+            <h1 class="display">Cut files, fonts, and templates<br>for your next project.</h1>
+            <p class="sub">Ready-to-cut designs for Cricut, Silhouette, and print — every one made by Digital Wawa.</p>
             <div id="cl-search">
               <input id="cl-search-input" type="text" placeholder="Search svgs, templates, patterns..." value="${state.search}">
               <button id="cl-search-btn">Search</button>
@@ -429,10 +429,9 @@
       <section id="cl-sell-banner">
         <div class="wrap inner">
           <div>
-            <h2 class="display">List a design, set your price, keep 70%.</h2>
-            <p>Upload your SVGs, fonts, or templates once. Buyers download instantly, and payouts land in your account after each sale.</p>
+            <h2 class="display">New designs added regularly.</h2>
+            <p>Every SVG, template, and pattern here is made in-house by Digital Wawa — check back often for fresh drops.</p>
           </div>
-          <button id="cl-sell-banner-btn">Start selling</button>
         </div>
       </section>
     `;
@@ -443,7 +442,6 @@
     main.querySelectorAll('[data-quick]').forEach(b=> b.addEventListener('click', ()=>{ state.search=b.dataset.quick; renderBrowse(); }));
     main.querySelectorAll('[data-open]').forEach(el=> el.addEventListener('click', (e)=>{ if(e.target.closest('[data-add]')) return; openProduct(el.dataset.open); }));
     main.querySelectorAll('[data-add]').forEach(el=> el.addEventListener('click', (e)=>{ e.stopPropagation(); addToCart(el.dataset.add); flashAdded(el); }));
-    $('#cl-sell-banner-btn').addEventListener('click', ()=> setNav('sell'));
   }
 
   function renderGridOnly(){
@@ -489,6 +487,36 @@
     main.querySelector('[data-buy]').addEventListener('click', ()=>{ addToCart(item.id); openCart(); });
   }
 
+  function renderResetPassword(){
+    main.innerHTML = `
+      <div class="wrap" id="cl-sell">
+        <h1 class="display">Set a new password</h1>
+        <p class="lede">You followed a password reset link. Choose a new password below.</p>
+        <div class="sell-form" style="max-width:380px">
+          <form id="cl-newpw-form">
+            <div class="field"><label>New password</label><input type="password" id="np-password" minlength="6" required></div>
+            <div class="field"><label>Confirm new password</label><input type="password" id="np-password2" minlength="6" required></div>
+            <button type="submit" class="submit">Save new password</button>
+            ${state.resetError ? `<div class="error">${state.resetError}</div>` : ''}
+          </form>
+        </div>
+      </div>`;
+    $('#cl-newpw-form').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const p1 = $('#np-password').value, p2 = $('#np-password2').value;
+      if(p1 !== p2){ state.resetError = "Passwords don't match."; renderResetPassword(); return; }
+      const { error } = await supabase.auth.updateUser({ password: p1 });
+      if(error){ state.resetError = error.message; renderResetPassword(); return; }
+      state.resetError = '';
+      state.view = 'sell';
+      const { data } = await supabase.auth.getSession();
+      state.session = data.session;
+      await loadListings();
+      setNav('sell', true);
+      render();
+    });
+  }
+
   function renderSell(){
     if(!supabaseReady){
       main.innerHTML = `
@@ -511,6 +539,8 @@
               <div class="field"><label>Password</label><input type="password" id="si-password" required></div>
               <button type="submit" class="submit">Sign in</button>
               ${state.authError ? `<div class="error">${state.authError}</div>` : ''}
+              <button type="button" id="cl-forgot-link" class="ci-remove" style="margin-top:10px;">Forgot password?</button>
+              ${state.resetMessage ? `<div class="note" style="color:var(--mat-dark)">${state.resetMessage}</div>` : ''}
               <div class="note">Create your account first in the Supabase dashboard under Authentication &gt; Users — this form signs in with that email and password.</div>
             </form>
           </div>
@@ -525,16 +555,25 @@
         await loadListings();
         renderSell();
       });
+      $('#cl-forgot-link').addEventListener('click', async ()=>{
+        const email = $('#si-email').value.trim();
+        if(!email){ state.authError = 'Type your email above first, then click "Forgot password?"'; renderSell(); return; }
+        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname });
+        state.authError = '';
+        state.resetMessage = error ? '' : 'Check your email for a password reset link.';
+        if(error) state.authError = error.message;
+        renderSell();
+      });
       return;
     }
 
     const mine = state.userListings;
-    const totalEarnings = mine.reduce((sum,i)=> sum + (i.price * (i.sales||0) * 0.7), 0);
+    const totalRevenue = mine.reduce((sum,i)=> sum + (i.price * (i.sales||0)), 0);
     const totalSales = mine.reduce((sum,i)=> sum + (i.sales||0), 0);
     main.innerHTML = `
       <div class="wrap" id="cl-sell">
         <h1 class="display">Digital Wawa</h1>
-        <p class="lede">Upload a design once — buyers can find it across the library within your chosen category. You keep 70% of every sale.</p>
+        <p class="lede">Upload a design once and it appears in your library right away.</p>
         <div class="signed-in-row"><span>Signed in as ${state.session.user.email}</span><button id="cl-signout">Sign out</button></div>
         <div class="sell-grid">
           <div class="sell-form">
@@ -561,7 +600,7 @@
             <div class="stat-row">
               <div class="stat"><div class="num mono">${mine.length}</div><div class="label">Listings</div></div>
               <div class="stat"><div class="num mono">${totalSales}</div><div class="label">Downloads</div></div>
-              <div class="stat"><div class="num mono">${fmt(totalEarnings)}</div><div class="label">Est. earnings (70%)</div></div>
+              <div class="stat"><div class="num mono">${fmt(totalRevenue)}</div><div class="label">Revenue</div></div>
             </div>
             <div class="listings-head"><h3>Your listings</h3></div>
             <div id="cl-my-listings">
@@ -610,6 +649,7 @@
     if (state.view==='browse') renderBrowse();
     else if (state.view==='product') renderProduct();
     else if (state.view==='sell') renderSell();
+    else if (state.view==='reset-password') renderResetPassword();
     renderCartBits();
   }
 
@@ -655,14 +695,11 @@
     }
 
     const subtotal = items.reduce((s,x)=>s+x.item.price*x.qty,0);
-    const creatorPayout = subtotal * 0.7;
     const summaryEl = $('#cl-cart-summary');
     summaryEl.innerHTML = `
-      <div class="sum-row"><span>Subtotal</span><span class="val">${fmt(subtotal)}</span></div>
-      <div class="sum-row"><span>Marketplace fee (30%, from creator payout)</span><span class="val">${fmt(subtotal-creatorPayout)}</span></div>
-      <div class="sum-row total"><span>Total due</span><span class="val">${fmt(subtotal)}</span></div>
+      <div class="sum-row total"><span>Total</span><span class="val">${fmt(subtotal)}</span></div>
       <button id="cl-checkout-btn" ${items.length===0?'disabled':''}>Checkout</button>
-      <div id="cl-checkout-note">Payments aren't wired up yet — that's the Stripe step. Once connected, this button hands off to a real checkout, then unlocks downloads and pays each creator their 70% share automatically.</div>
+      <div id="cl-checkout-note">Payments aren't wired up yet — that's the Stripe step. Once connected, this button hands off to a real checkout and unlocks downloads automatically.</div>
     `;
     const btn = $('#cl-checkout-btn');
     if(btn) btn.addEventListener('click', ()=>{ if(items.length===0) return; alert("Checkout isn't connected to a payment processor yet."); });
@@ -671,6 +708,13 @@
   async function init(){
     loadCart();
     if(supabaseReady){
+      supabase.auth.onAuthStateChange((event, session)=>{
+        if(event === 'PASSWORD_RECOVERY'){
+          state.session = session;
+          state.view = 'reset-password';
+          render();
+        }
+      });
       const { data } = await supabase.auth.getSession();
       state.session = data.session || null;
       await loadListings();

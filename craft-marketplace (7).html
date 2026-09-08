@@ -1,0 +1,682 @@
+<!-- Cutline / Digital Wawa — craft design marketplace -->
+<!-- ============================================================
+     SETUP (do this once before deploying):
+     1. Create a free project at https://supabase.com
+     2. In the SQL editor, run the schema at the bottom of this
+        comment block.
+     3. In Storage, create a bucket called "design-files" (private).
+     4. In Authentication > Users, manually add yourself as a user
+        (email + password) — that's the login you'll use to publish.
+     5. In Project Settings > API, copy your Project URL and anon
+        public key into SUPABASE_URL and SUPABASE_ANON_KEY below.
+     6. Deploy this single file at https://app.netlify.com/drop
+        (drag and drop — no build step needed) to get a live link.
+
+     -- SQL to run in Supabase's SQL editor --
+     create table listings (
+       id uuid primary key default gen_random_uuid(),
+       title text not null,
+       category text not null,
+       price numeric not null,
+       formats text[] not null,
+       description text,
+       creator text default 'Digital Wawa',
+       sales int default 0,
+       pattern int default 0,
+       file_path text,
+       created_at timestamptz default now()
+     );
+     alter table listings enable row level security;
+     create policy "public read" on listings for select using (true);
+     create policy "owner insert" on listings for insert with check (auth.role() = 'authenticated');
+     create policy "owner delete" on listings for delete using (auth.role() = 'authenticated');
+     ============================================================ -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  #cutline {
+    --paper: #EEF0E8;
+    --paper-dim: #E4E7DC;
+    --ink: #17181A;
+    --ink-soft: #4B4E47;
+    --mat: #2F5D46;
+    --mat-dark: #234534;
+    --mat-light: #DCE6DE;
+    --blade: #E23F73;
+    --blade-dark: #C22F60;
+    --line: #C7CBBC;
+    --card: #FFFFFF;
+
+    font-family: 'IBM Plex Sans', sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    position: relative;
+    min-height: 100vh;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  #cutline * { box-sizing: border-box; }
+  #cutline .display { font-family: 'Space Grotesk', sans-serif; }
+  #cutline .mono { font-family: 'IBM Plex Mono', monospace; }
+  #cutline button { font-family: inherit; cursor: pointer; }
+  #cutline a { color: inherit; text-decoration: none; }
+  #cutline input, #cutline select, #cutline textarea { font-family: inherit; }
+
+  #cutline .wrap { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
+  #cutline .grid-bg {
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 34px 34px;
+  }
+
+  #cl-nav { position: sticky; top: 0; z-index: 40; background: var(--paper); border-bottom: 1.5px solid var(--ink); }
+  #cl-nav .bar { display: flex; align-items: center; justify-content: space-between; height: 68px; gap: 24px; }
+  #cl-nav .logo { display:flex; align-items:center; gap:8px; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+  #cl-nav .logo .dot { width:9px; height:9px; background: var(--blade); border-radius:50%; display:inline-block; }
+  #cl-nav .links { display: flex; gap: 4px; align-items:center; }
+  #cl-nav .links button { background:none; border:none; padding: 8px 14px; font-size: 14.5px; color: var(--ink-soft); font-weight:500; border-radius: 3px; }
+  #cl-nav .links button.active { color: var(--ink); background: var(--mat-light); }
+  #cl-nav .links button:hover { color: var(--ink); }
+  #cl-nav .right { display:flex; align-items:center; gap: 14px; }
+  #cl-nav .cart-btn { position:relative; background: var(--ink); color:#fff; border:none; padding: 9px 16px; font-size: 14px; font-weight: 600; display:flex; align-items:center; gap:8px; clip-path: polygon(0 0, 100% 0, 100% 100%, 8px 100%, 0 calc(100% - 8px)); }
+  #cl-nav .cart-count { background: var(--blade); color:#fff; font-family:'IBM Plex Mono',monospace; font-size: 11px; min-width: 18px; height:18px; border-radius:50%; display:flex; align-items:center; justify-content:center; padding: 0 4px; }
+
+  #cl-hero { padding: 64px 0 56px; position: relative; overflow:hidden; }
+  #cl-hero .hero-inner { display:grid; grid-template-columns: 1.05fr 0.85fr; gap: 48px; align-items:center; }
+  #cl-hero h1 { font-size: 46px; line-height: 1.05; letter-spacing: -0.02em; margin: 0 0 18px; font-weight: 700; }
+  #cl-hero p.sub { font-size: 16.5px; color: var(--ink-soft); max-width: 46ch; margin: 0 0 26px; }
+  #cl-search { display:flex; border: 1.5px solid var(--ink); background: var(--card); max-width: 460px; }
+  #cl-search input { flex:1; border:none; background:none; padding: 13px 14px; font-size: 14.5px; outline:none; }
+  #cl-search button { background: var(--ink); color:#fff; border:none; padding: 0 18px; font-size: 14px; font-weight:600; }
+  #cl-hero .quick { margin-top: 16px; display:flex; gap: 8px; flex-wrap:wrap; font-size: 13px; }
+  #cl-hero .quick span { color: var(--ink-soft); }
+  #cl-hero .quick button { background:none; border:none; text-decoration: underline; text-underline-offset: 3px; color: var(--ink); font-size:13px; padding:0; }
+  #cl-hero-art { position: relative; height: 320px; }
+  #cl-hero-art .swatch { position: absolute; width: 190px; height: 230px; background: var(--card); border: 1.5px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); }
+  #cl-hero-art .swatch .tag { position:absolute; top:-11px; left:14px; background: var(--blade); color:#fff; font-family:'IBM Plex Mono',monospace; font-size: 10.5px; padding: 3px 7px; letter-spacing: 0.02em; }
+  #cl-hero-art .s1 { top: 0; left: 30px; transform: rotate(-6deg); z-index:2; }
+  #cl-hero-art .s2 { top: 30px; left: 190px; transform: rotate(5deg); z-index:1; }
+
+  #cl-cats { padding: 6px 0 34px; }
+  #cl-cats .row { display:flex; gap: 10px; overflow-x:auto; padding-bottom: 4px; }
+  #cl-cats button { flex: 0 0 auto; background: var(--card); border: 1.5px solid var(--ink); padding: 9px 16px 9px 14px; font-size: 13.5px; font-weight: 500; display:flex; align-items:center; gap: 8px; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%); }
+  #cl-cats button.active { background: var(--mat); color:#fff; border-color: var(--mat); }
+  #cl-cats button .count { font-family:'IBM Plex Mono',monospace; font-size: 11px; opacity:0.65; }
+
+  #cl-section-title { display:flex; align-items:baseline; justify-content:space-between; margin-bottom: 18px; }
+  #cl-section-title h2 { font-size: 22px; margin:0; font-weight:700; letter-spacing:-0.01em; }
+  #cl-section-title .meta { font-family:'IBM Plex Mono',monospace; font-size: 12px; color: var(--ink-soft); }
+
+  #cl-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap: 20px; padding-bottom: 56px; }
+  .cl-card { background: var(--card); border: 1.5px solid var(--ink); display:flex; flex-direction:column; cursor:pointer; transition: transform .12s ease; }
+  .cl-card:hover { transform: translate(-2px,-2px); box-shadow: 4px 4px 0 var(--ink); }
+  .cl-card .thumb { height: 148px; position:relative; border-bottom: 1.5px solid var(--ink); }
+  .cl-card .thumb .badge { position:absolute; top:8px; left:8px; background: var(--ink); color:#fff; font-family:'IBM Plex Mono',monospace; font-size: 10px; padding: 3px 6px; }
+  .cl-card .body { padding: 13px 14px 15px; display:flex; flex-direction:column; gap:8px; flex:1; }
+  .cl-card .title { font-size: 14.5px; font-weight: 600; line-height:1.3; }
+  .cl-card .creator { font-size: 12.5px; color: var(--ink-soft); }
+  .cl-card .formats { display:flex; gap:5px; flex-wrap:wrap; }
+  .cl-card .formats span { border:1px solid var(--line); font-family:'IBM Plex Mono',monospace; font-size: 10px; padding: 2px 5px; color: var(--ink-soft); }
+  .cl-card .foot { display:flex; align-items:center; justify-content:space-between; margin-top:auto; padding-top:6px; }
+  .cl-card .price { font-family:'IBM Plex Mono',monospace; font-weight:500; color: var(--blade-dark); font-size: 14.5px; }
+  .cl-card .add { background: var(--mat); color:#fff; border:none; font-size: 12px; font-weight:600; padding: 6px 10px; }
+  .cl-card .add:hover { background: var(--mat-dark); }
+
+  .pat-0 { background-color: var(--mat-light); background-image: radial-gradient(var(--ink) 1.2px, transparent 1.6px); background-size: 12px 12px; }
+  .pat-1 { background-color: #fff; background-image: repeating-linear-gradient(45deg, var(--blade) 0 2px, transparent 2px 11px); }
+  .pat-2 { background-color: #fff; background-image: repeating-linear-gradient(var(--ink) 0 1px, transparent 1px 13px), repeating-linear-gradient(90deg, var(--ink) 0 1px, transparent 1px 13px); }
+  .pat-3 { background-color: var(--paper-dim); background-image: radial-gradient(var(--blade) 2px, transparent 2.4px); background-size: 22px 22px; }
+  .pat-4 { background-color: #fff; background-image: repeating-linear-gradient(-45deg, var(--mat) 0 3px, transparent 3px 14px); }
+  .pat-5 { background-color: var(--mat-light); background-image: linear-gradient(135deg, var(--mat) 25%, transparent 25%), linear-gradient(225deg, var(--mat) 25%, transparent 25%); background-size: 20px 20px; }
+  .pat-6 { background-color: #fff; background-image: radial-gradient(circle at 50% 50%, var(--ink) 0 2px, transparent 2.2px); background-size: 16px 16px; }
+  .pat-7 { background-color: var(--paper-dim); background-image: repeating-linear-gradient(0deg, var(--blade) 0 1px, transparent 1px 9px); }
+  .pat-8 { background-color: #fff; background-image: linear-gradient(45deg, var(--ink) 12%, transparent 12.5%, transparent 87%, var(--ink) 87.5%, var(--ink)), linear-gradient(-45deg, var(--ink) 12%, transparent 12.5%, transparent 87%, var(--ink) 87.5%, var(--ink)); background-size: 22px 22px; opacity: 0.85; }
+  .pat-9 { background-color: var(--mat-light); background-image: repeating-linear-gradient(90deg, var(--ink) 0 1px, transparent 1px 18px); }
+
+  #cl-sell-banner { background: var(--ink); color: #fff; padding: 52px 0; margin-bottom: 56px; }
+  #cl-sell-banner .inner { display:flex; align-items:center; justify-content:space-between; gap: 32px; flex-wrap:wrap; }
+  #cl-sell-banner h2 { font-size: 28px; margin: 0 0 8px; font-weight:700; letter-spacing:-0.01em; max-width: 20ch; }
+  #cl-sell-banner p { color: #C7CBBC; margin:0; max-width: 46ch; font-size:14.5px; }
+  #cl-sell-banner button { background: var(--blade); color:#fff; border:none; padding: 13px 22px; font-size: 14.5px; font-weight:600; white-space:nowrap; }
+  #cl-sell-banner button:hover { background: var(--blade-dark); }
+
+  #cl-footer { border-top: 1.5px solid var(--ink); padding: 28px 0 40px; }
+  #cl-footer .row { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
+  #cl-footer .mono { font-size: 11.5px; color: var(--ink-soft); }
+
+  #cl-detail { padding: 40px 0 64px; }
+  #cl-back { background:none; border:none; font-size: 13.5px; color: var(--ink-soft); margin-bottom: 22px; padding:0; display:flex; align-items:center; gap:6px; }
+  #cl-back:hover { color: var(--ink); }
+  .detail-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 44px; }
+  .detail-thumb { border: 1.5px solid var(--ink); height: 420px; position:relative; }
+  .detail-thumb .badge { position:absolute; top:12px; left:12px; background: var(--ink); color:#fff; font-family:'IBM Plex Mono',monospace; font-size: 11px; padding: 4px 8px; }
+  .detail-info h1 { font-size: 28px; margin: 0 0 6px; font-weight:700; letter-spacing:-0.01em; }
+  .detail-info .creator-line { font-size: 14px; color: var(--ink-soft); margin-bottom: 18px; }
+  .detail-info .price { font-family:'IBM Plex Mono',monospace; font-size: 26px; color: var(--blade-dark); margin-bottom: 18px; }
+  .detail-info .formats { display:flex; gap:6px; margin-bottom: 22px; flex-wrap:wrap; }
+  .detail-info .formats span { border:1px solid var(--line); font-family:'IBM Plex Mono',monospace; font-size: 11px; padding: 4px 8px; color: var(--ink-soft); }
+  .detail-info .desc { font-size: 14.5px; color: var(--ink-soft); margin-bottom: 26px; max-width: 52ch; }
+  .detail-info .buy-row { display:flex; gap: 10px; margin-bottom: 26px; }
+  .detail-info .buy-row button { padding: 13px 20px; font-size: 14.5px; font-weight:600; border:1.5px solid var(--ink); }
+  .detail-info .buy-row .add { background: var(--card); color: var(--ink); }
+  .detail-info .buy-row .buy { background: var(--ink); color:#fff; }
+  .detail-info .license { border-top: 1px solid var(--line); padding-top:18px; font-size: 12.5px; color: var(--ink-soft); }
+  .detail-info .license b { color: var(--ink); }
+
+  #cl-sell { padding: 40px 0 64px; }
+  #cl-sell h1 { font-size: 28px; margin: 0 0 6px; font-weight:700; }
+  #cl-sell p.lede { color: var(--ink-soft); font-size: 14.5px; margin: 0 0 32px; max-width: 60ch; }
+  .sell-grid { display:grid; grid-template-columns: 380px 1fr; gap: 40px; align-items:start; }
+  .sell-form { background: var(--card); border: 1.5px solid var(--ink); padding: 24px; }
+  .sell-form h3 { margin: 0 0 18px; font-size: 15px; font-weight:700; }
+  .field { margin-bottom: 16px; }
+  .field label { display:block; font-size: 12.5px; font-weight:600; margin-bottom: 6px; }
+  .field input[type=text], .field input[type=number], .field input[type=email], .field input[type=password], .field input[type=file], .field select, .field textarea { width:100%; border: 1.5px solid var(--line); padding: 9px 11px; font-size: 13.5px; outline:none; background: var(--paper); }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--ink); }
+  .field textarea { resize: vertical; min-height: 64px; }
+  .fmt-row { display:flex; gap: 10px; flex-wrap:wrap; }
+  .fmt-row label { display:flex; align-items:center; gap:6px; font-size: 12.5px; font-weight:500; border:1px solid var(--line); padding: 5px 9px; }
+  .fmt-row input { margin:0; width:auto; }
+  .sell-form .submit { width:100%; background: var(--mat); color:#fff; border:none; padding: 12px; font-size: 14.5px; font-weight:600; margin-top: 6px; }
+  .sell-form .submit:hover { background: var(--mat-dark); }
+  .sell-form .note { font-size: 11.5px; color: var(--ink-soft); margin-top: 10px; }
+  .sell-form .error { font-size: 12px; color: var(--blade-dark); margin-top: 8px; }
+
+  .listings-head { display:flex; justify-content:space-between; align-items:baseline; margin-bottom: 14px; }
+  .listings-head h3 { font-size: 15px; margin:0; font-weight:700; }
+  .stat-row { display:flex; gap: 14px; margin-bottom: 22px; }
+  .stat { border: 1.5px solid var(--ink); padding: 14px 18px; flex:1; }
+  .stat .num { font-family:'IBM Plex Mono',monospace; font-size: 22px; font-weight:500; }
+  .stat .label { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+  .listing-row { display:flex; align-items:center; gap: 14px; border: 1.5px solid var(--line); padding: 12px 14px; margin-bottom: 10px; background: var(--card); }
+  .listing-row .sw { width: 46px; height: 46px; border: 1px solid var(--ink); flex: 0 0 auto; }
+  .listing-row .info { flex:1; min-width:0; }
+  .listing-row .info .t { font-size: 13.5px; font-weight:600; }
+  .listing-row .info .m { font-size: 11.5px; color: var(--ink-soft); font-family:'IBM Plex Mono',monospace; }
+  .listing-row .price { font-family:'IBM Plex Mono',monospace; font-size: 13.5px; color: var(--blade-dark); }
+  .listing-row .del { background:none; border:none; color: var(--ink-soft); font-size: 12px; text-decoration: underline; }
+  .empty-box { border: 1.5px dashed var(--line); padding: 30px; text-align:center; color: var(--ink-soft); font-size: 13.5px; }
+  .signed-in-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; font-size:13px; color:var(--ink-soft); }
+  .signed-in-row button { background:none; border:none; text-decoration:underline; font-size:12.5px; color: var(--ink-soft); }
+
+  #cl-overlay { position: fixed; inset:0; background: rgba(23,24,26,0.4); z-index: 60; opacity:0; pointer-events:none; transition: opacity .18s ease; }
+  #cl-overlay.open { opacity:1; pointer-events:auto; }
+  #cl-drawer { position: fixed; top:0; right:0; bottom:0; width: 400px; max-width: 92vw; background: var(--paper); border-left: 1.5px solid var(--ink); z-index: 61; transform: translateX(100%); transition: transform .2s ease; display:flex; flex-direction:column; }
+  #cl-drawer.open { transform: translateX(0); }
+  #cl-drawer .dh { padding: 20px 22px; border-bottom: 1.5px solid var(--ink); display:flex; justify-content:space-between; align-items:center; }
+  #cl-drawer .dh h3 { margin:0; font-size: 17px; font-weight:700; }
+  #cl-drawer .dh button { background:none; border:none; font-size: 20px; line-height:1; }
+  #cl-drawer .items { flex:1; overflow-y:auto; padding: 16px 22px; }
+  .cart-item { display:flex; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+  .cart-item .sw { width: 54px; height: 54px; border: 1px solid var(--ink); flex:0 0 auto; }
+  .cart-item .ci-info { flex:1; }
+  .cart-item .ci-title { font-size: 13.5px; font-weight:600; margin-bottom: 4px; }
+  .cart-item .ci-row { display:flex; justify-content:space-between; align-items:center; }
+  .qty-stepper { display:flex; align-items:center; border: 1px solid var(--ink); }
+  .qty-stepper button { background:none; border:none; width: 24px; height: 24px; font-size: 13px; }
+  .qty-stepper span { font-family:'IBM Plex Mono',monospace; font-size: 12.5px; min-width: 20px; text-align:center; }
+  .cart-item .ci-price { font-family:'IBM Plex Mono',monospace; font-size: 13px; color: var(--blade-dark); }
+  .cart-item .ci-remove { font-size: 11.5px; color: var(--ink-soft); text-decoration: underline; background:none; border:none; margin-top:4px; }
+  #cl-drawer .summary { border-top: 1.5px solid var(--ink); padding: 18px 22px 22px; }
+  .sum-row { display:flex; justify-content:space-between; font-size: 13.5px; margin-bottom: 8px; }
+  .sum-row.total { font-weight:700; font-size: 15px; margin-top: 10px; padding-top:10px; border-top: 1px solid var(--line); }
+  .sum-row .val { font-family:'IBM Plex Mono',monospace; }
+  #cl-checkout-btn { width:100%; background: var(--ink); color:#fff; border:none; padding: 13px; font-size: 14.5px; font-weight:600; margin-top: 14px; }
+  #cl-checkout-note { font-size: 11px; color: var(--ink-soft); margin-top: 10px; line-height:1.5; }
+
+  @media (max-width: 900px) {
+    #cl-hero .hero-inner { grid-template-columns: 1fr; }
+    #cl-hero-art { display:none; }
+    #cl-grid { grid-template-columns: repeat(2,1fr); }
+    .detail-grid { grid-template-columns: 1fr; }
+    .sell-grid { grid-template-columns: 1fr; }
+    #cl-nav .links { display:none; }
+  }
+</style>
+
+<div id="cutline">
+  <nav id="cl-nav">
+    <div class="wrap bar">
+      <div class="logo"><span class="dot"></span>Digital Wawa</div>
+      <div class="links">
+        <button data-nav="browse" class="active">Browse</button>
+        <button data-nav="sell">Sell</button>
+      </div>
+      <div class="right">
+        <button class="cart-btn" id="cl-cart-open">Cart <span class="cart-count mono" id="cl-cart-count">0</span></button>
+      </div>
+    </div>
+  </nav>
+
+  <main id="cl-main"></main>
+
+  <footer id="cl-footer">
+    <div class="wrap row">
+      <div class="mono">Digital Wawa — powered by Cutline</div>
+      <div class="mono">Browse · Sell · Formats: SVG, PNG, DXF, EPS, PDF</div>
+    </div>
+  </footer>
+
+  <div id="cl-overlay"></div>
+  <div id="cl-drawer">
+    <div class="dh"><h3>Your cart</h3><button id="cl-cart-close">&times;</button></div>
+    <div class="items" id="cl-cart-items"></div>
+    <div class="summary" id="cl-cart-summary"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ---------------------------------------------------------------
+  // 1) FILL THESE IN after creating your Supabase project.
+  //    Project Settings > API in the Supabase dashboard.
+  // ---------------------------------------------------------------
+  const SUPABASE_URL = 'https://vgqivetxhiivjctogxgf.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_YCd4IrFxkPsxcE51t9s5yg_jlU5Cy2H';
+  // ---------------------------------------------------------------
+
+  const supabaseReady = SUPABASE_URL.startsWith('http') && SUPABASE_ANON_KEY.length > 20;
+  const supabase = supabaseReady ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+  const seed = [
+    {id:'s1', title:'Wildflower heart bouquet', category:'SVGs', price:4.50, formats:['SVG','PNG','DXF','EPS'], creator:'Maple & Fern Studio', sales:842, pat:0, desc:'A layered floral heart made from hand-drawn wildflowers. Cuts cleanly on vinyl, cardstock, or fabric — sized for a standard 12x12 mat.'},
+    {id:'s2', title:'Sitting bear line art', category:'Illustrations', price:3.00, formats:['SVG','PNG','PDF'], creator:'Northline Co', sales:1290, pat:6, desc:'Minimal single-line bear illustration, great for nursery prints, onesies, or engraving.'},
+    {id:'s3', title:'Holiday shipping label trio', category:'Templates', price:5.00, formats:['PNG','PDF'], creator:'Pickled Thistle', sales:2110, pat:2, desc:'Three editable "North Pole" shipping labels with fillable delivery fields — print at home, no cutting required.'},
+    {id:'s4', title:'Bitchcraft script wordmark', category:'Clipart', price:3.50, formats:['SVG','PNG','DXF','EPS'], creator:'Pickled Thistle', sales:640, pat:8, desc:'A bold script wordmark with a bat accent. Works well on dark or light apparel.'},
+    {id:'s5', title:'Christmas tree silhouette', category:'SVGs', price:2.50, formats:['SVG','PNG','DXF'], creator:'Northline Co', sales:955, pat:4, desc:'A clean single-layer tree silhouette, ready to cut for ornaments or window clings.'},
+    {id:'s6', title:'Blessed & faith monogram frames', category:'Clipart', price:4.00, formats:['SVG','PNG'], creator:'Maple & Fern Studio', sales:410, pat:9, desc:'Two decorative script frames for monogramming — pair with any single letter font.'},
+    {id:'s7', title:'Winter berries seamless pattern', category:'Patterns', price:6.00, formats:['PNG','PDF'], creator:'Foxglove Paper Co', sales:301, pat:3, desc:'A tileable winter berry print, 300dpi, ready for sublimation or fabric printing.'},
+    {id:'s8', title:'Faux leather floral sheet', category:'Sublimation', price:3.75, formats:['PNG','PDF'], creator:'Foxglove Paper Co', sales:528, pat:5, desc:'Printable faux-leather texture with a soft floral overlay, sized for earring blanks.'},
+    {id:'s9', title:'Gingham picnic border', category:'Patterns', price:2.00, formats:['SVG','PNG'], creator:'Foxglove Paper Co', sales:190, pat:1, desc:'A classic gingham border strip for cards, labels, and packaging.'},
+    {id:'s10', title:'Autumn leaves heart set', category:'SVGs', price:4.50, formats:['SVG','PNG','DXF','EPS','PDF'], creator:'Maple & Fern Studio', sales:1780, pat:7, desc:'Four layered leaf-heart designs for fall tees and totes, tested on 100% cotton.'},
+    {id:'s11', title:'Snowflake grid clipart', category:'Illustrations', price:2.25, formats:['SVG','PNG'], creator:'Northline Co', sales:266, pat:0, desc:'A set of six geometric snowflakes, evenly weighted for small-scale cutting.'},
+    {id:'s12', title:'Coffee shop rubber stamp set', category:'Templates', price:3.25, formats:['SVG','PNG','PDF'], creator:'Foxglove Paper Co', sales:174, pat:6, desc:'Four faux-stamp graphics for packaging and stickers.'},
+  ];
+  const categories = ['All','SVGs','Illustrations','Templates','Clipart','Sublimation','Patterns'];
+
+  let state = { view:'browse', activeCategory:'All', search:'', productId:null, userListings:[], cart:{}, cartOpen:false, session:null, authError:'' };
+
+  const $ = sel => document.querySelector(sel);
+  const main = $('#cl-main');
+  const fmt = n => '$' + Number(n).toFixed(2);
+
+  function allListings(){ return [...state.userListings, ...seed]; }
+
+  // ---------------- cart: browser-local, works on any host ----------------
+  function loadCart(){
+    try { state.cart = JSON.parse(localStorage.getItem('dw-cart') || '{}'); } catch(e){ state.cart = {}; }
+  }
+  function saveCart(){
+    localStorage.setItem('dw-cart', JSON.stringify(state.cart));
+  }
+
+  // ---------------- listings: Supabase-backed ----------------
+  async function loadListings(){
+    if(!supabaseReady){ state.userListings = []; return; }
+    const { data, error } = await supabase.from('listings').select('*').order('created_at', { ascending:false });
+    if(error){ console.error(error); state.userListings = []; return; }
+    state.userListings = (data||[]).map(row => ({
+      id: row.id, title: row.title, category: row.category, price: Number(row.price),
+      formats: row.formats||[], desc: row.description||'', creator: row.creator||'Digital Wawa',
+      sales: row.sales||0, pat: row.pattern||0, filePath: row.file_path
+    }));
+  }
+
+  async function publishListing({title, category, price, formats, desc, file}){
+    if(!supabaseReady) throw new Error('Connect Supabase first — see the setup comment at the top of this file.');
+    if(!state.session) throw new Error('Sign in before publishing.');
+    let file_path = null;
+    if(file){
+      const path = `${Date.now()}-${file.name}`;
+      const { error: upErr } = await supabase.storage.from('design-files').upload(path, file);
+      if(upErr) throw upErr;
+      file_path = path;
+    }
+    const { error } = await supabase.from('listings').insert({
+      title, category, price, formats, description: desc, creator: 'Digital Wawa',
+      pattern: Math.floor(Math.random()*10), file_path
+    });
+    if(error) throw error;
+    await loadListings();
+  }
+
+  async function deleteListing(id){
+    if(!supabaseReady) return;
+    const { error } = await supabase.from('listings').delete().eq('id', id);
+    if(error){ console.error(error); return; }
+    await loadListings();
+  }
+
+  function addToCart(id){ state.cart[id] = (state.cart[id]||0) + 1; saveCart(); renderCartBits(); }
+  function setQty(id, qty){ if (qty<=0) delete state.cart[id]; else state.cart[id]=qty; saveCart(); renderCartBits(); }
+
+  function cardHtml(item){
+    const formats = item.formats.map(f=>`<span>${f}</span>`).join('');
+    return `
+      <div class="cl-card" data-open="${item.id}">
+        <div class="thumb pat-${item.pat}"><span class="badge mono">${item.formats[0]||''}</span></div>
+        <div class="body">
+          <div class="title">${item.title}</div>
+          <div class="creator">${item.creator}</div>
+          <div class="formats">${formats}</div>
+          <div class="foot">
+            <span class="price mono">${fmt(item.price)}</span>
+            <button class="add" data-add="${item.id}">Add to cart</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function filteredList(){
+    return allListings().filter(i=>{
+      const catOk = state.activeCategory==='All' || i.category===state.activeCategory;
+      const q = state.search.trim().toLowerCase();
+      const searchOk = !q || i.title.toLowerCase().includes(q) || i.creator.toLowerCase().includes(q);
+      return catOk && searchOk;
+    });
+  }
+
+  function renderBrowse(){
+    const list = filteredList();
+    const counts = {};
+    allListings().forEach(i=>{ counts[i.category]=(counts[i.category]||0)+1; });
+
+    main.innerHTML = `
+      <section id="cl-hero" class="grid-bg">
+        <div class="wrap hero-inner">
+          <div>
+            <h1 class="display">Cut files, fonts, and templates<br>made by working crafters.</h1>
+            <p class="sub">Buy ready-to-cut designs for Cricut, Silhouette, and print — or list your own and get paid when they sell.</p>
+            <div id="cl-search">
+              <input id="cl-search-input" type="text" placeholder="Search svgs, templates, patterns..." value="${state.search}">
+              <button id="cl-search-btn">Search</button>
+            </div>
+            <div class="quick"><span>Popular:</span>
+              <button data-quick="hearts">hearts</button>
+              <button data-quick="christmas">christmas</button>
+              <button data-quick="monogram">monogram</button>
+            </div>
+          </div>
+          <div id="cl-hero-art">
+            <div class="swatch s1 pat-0"><span class="tag mono">SVG · DXF</span></div>
+            <div class="swatch s2 pat-1"><span class="tag mono">$4.50</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="cl-cats" class="wrap">
+        <div class="row">
+          ${categories.map(c=>`
+            <button data-cat="${c}" class="${c===state.activeCategory?'active':''}">
+              ${c} ${c!=='All' ? `<span class="count">${counts[c]||0}</span>` : ''}
+            </button>`).join('')}
+        </div>
+      </section>
+
+      <section class="wrap">
+        <div id="cl-section-title">
+          <h2 class="display">${state.activeCategory==='All' ? 'Fresh in the library' : state.activeCategory}</h2>
+          <div class="meta">${list.length} result${list.length===1?'':'s'}</div>
+        </div>
+        <div id="cl-grid">
+          ${list.length ? list.map(cardHtml).join('') : `<div class="empty-box" style="grid-column:1/-1">No designs match that search. Try a different word or category.</div>`}
+        </div>
+      </section>
+
+      <section id="cl-sell-banner">
+        <div class="wrap inner">
+          <div>
+            <h2 class="display">List a design, set your price, keep 70%.</h2>
+            <p>Upload your SVGs, fonts, or templates once. Buyers download instantly, and payouts land in your account after each sale.</p>
+          </div>
+          <button id="cl-sell-banner-btn">Start selling</button>
+        </div>
+      </section>
+    `;
+
+    $('#cl-search-input').addEventListener('input', e=>{ state.search = e.target.value; renderGridOnly(); });
+    $('#cl-search-btn').addEventListener('click', renderBrowse);
+    main.querySelectorAll('[data-cat]').forEach(b=> b.addEventListener('click', ()=>{ state.activeCategory=b.dataset.cat; renderBrowse(); }));
+    main.querySelectorAll('[data-quick]').forEach(b=> b.addEventListener('click', ()=>{ state.search=b.dataset.quick; renderBrowse(); }));
+    main.querySelectorAll('[data-open]').forEach(el=> el.addEventListener('click', (e)=>{ if(e.target.closest('[data-add]')) return; openProduct(el.dataset.open); }));
+    main.querySelectorAll('[data-add]').forEach(el=> el.addEventListener('click', (e)=>{ e.stopPropagation(); addToCart(el.dataset.add); flashAdded(el); }));
+    $('#cl-sell-banner-btn').addEventListener('click', ()=> setNav('sell'));
+  }
+
+  function renderGridOnly(){
+    const grid = $('#cl-grid');
+    const title = $('#cl-section-title .meta');
+    if(!grid) return;
+    const list = filteredList();
+    grid.innerHTML = list.length ? list.map(cardHtml).join('') : `<div class="empty-box" style="grid-column:1/-1">No designs match that search. Try a different word or category.</div>`;
+    if(title) title.textContent = `${list.length} result${list.length===1?'':'s'}`;
+    grid.querySelectorAll('[data-open]').forEach(el=> el.addEventListener('click', (e)=>{ if(e.target.closest('[data-add]')) return; openProduct(el.dataset.open); }));
+    grid.querySelectorAll('[data-add]').forEach(el=> el.addEventListener('click', (e)=>{ e.stopPropagation(); addToCart(el.dataset.add); flashAdded(el); }));
+  }
+
+  function flashAdded(btn){ const orig = btn.textContent; btn.textContent = 'Added'; setTimeout(()=>{ btn.textContent = orig; }, 900); }
+
+  function openProduct(id){ state.productId = id; state.view = 'product'; setNav('product', true); render(); window.scrollTo({top:0, behavior:'instant'}); }
+
+  function renderProduct(){
+    const item = allListings().find(i=>i.id===state.productId);
+    if(!item){ renderBrowse(); return; }
+    main.innerHTML = `
+      <div class="wrap" id="cl-detail">
+        <button id="cl-back">&larr; Back to browse</button>
+        <div class="detail-grid">
+          <div class="detail-thumb pat-${item.pat}"><span class="badge mono">${item.formats.join(' / ')}</span></div>
+          <div class="detail-info">
+            <h1 class="display">${item.title}</h1>
+            <div class="creator-line">by ${item.creator} &middot; ${item.sales||0} downloads</div>
+            <div class="price mono">${fmt(item.price)}</div>
+            <div class="formats">${item.formats.map(f=>`<span>${f}</span>`).join('')}</div>
+            <div class="desc">${item.desc||''}</div>
+            <div class="buy-row">
+              <button class="add" data-add="${item.id}">Add to cart</button>
+              <button class="buy" data-buy="${item.id}">Buy now</button>
+            </div>
+            <div class="license"><b>License:</b> Personal &amp; small-batch commercial use (up to 250 physical items) is included. Each format downloads as a zip once payment is confirmed.</div>
+          </div>
+        </div>
+      </div>
+    `;
+    $('#cl-back').addEventListener('click', ()=>{ state.view='browse'; setNav('browse', true); render(); });
+    main.querySelector('[data-add]').addEventListener('click', (e)=>{ addToCart(item.id); flashAdded(e.target); });
+    main.querySelector('[data-buy]').addEventListener('click', ()=>{ addToCart(item.id); openCart(); });
+  }
+
+  function renderSell(){
+    if(!supabaseReady){
+      main.innerHTML = `
+        <div class="wrap" id="cl-sell">
+          <h1 class="display">Digital Wawa</h1>
+          <p class="lede">This page isn't connected to a backend yet.</p>
+          <div class="empty-box">Add your Supabase project URL and anon key near the top of this file's script (look for SUPABASE_URL and SUPABASE_ANON_KEY) to enable real, saved listings and file uploads. Setup steps are in the comment at the very top of the file.</div>
+        </div>`;
+      return;
+    }
+    if(!state.session){
+      main.innerHTML = `
+        <div class="wrap" id="cl-sell">
+          <h1 class="display">Digital Wawa</h1>
+          <p class="lede">Sign in to publish and manage your designs.</p>
+          <div class="sell-form" style="max-width:380px">
+            <h3>Sign in</h3>
+            <form id="cl-signin-form">
+              <div class="field"><label>Email</label><input type="email" id="si-email" required></div>
+              <div class="field"><label>Password</label><input type="password" id="si-password" required></div>
+              <button type="submit" class="submit">Sign in</button>
+              ${state.authError ? `<div class="error">${state.authError}</div>` : ''}
+              <div class="note">Create your account first in the Supabase dashboard under Authentication &gt; Users — this form signs in with that email and password.</div>
+            </form>
+          </div>
+        </div>`;
+      $('#cl-signin-form').addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        const email = $('#si-email').value.trim();
+        const password = $('#si-password').value;
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if(error){ state.authError = error.message; renderSell(); return; }
+        state.session = data.session; state.authError = '';
+        await loadListings();
+        renderSell();
+      });
+      return;
+    }
+
+    const mine = state.userListings;
+    const totalEarnings = mine.reduce((sum,i)=> sum + (i.price * (i.sales||0) * 0.7), 0);
+    const totalSales = mine.reduce((sum,i)=> sum + (i.sales||0), 0);
+    main.innerHTML = `
+      <div class="wrap" id="cl-sell">
+        <h1 class="display">Digital Wawa</h1>
+        <p class="lede">Upload a design once — buyers can find it across the library within your chosen category. You keep 70% of every sale.</p>
+        <div class="signed-in-row"><span>Signed in as ${state.session.user.email}</span><button id="cl-signout">Sign out</button></div>
+        <div class="sell-grid">
+          <div class="sell-form">
+            <h3>Publish a new design</h3>
+            <form id="cl-upload-form">
+              <div class="field"><label>Title</label><input type="text" id="f-title" placeholder="e.g. Autumn leaves heart set" required></div>
+              <div class="field"><label>Category</label>
+                <select id="f-cat">${categories.filter(c=>c!=='All').map(c=>`<option>${c}</option>`).join('')}</select>
+              </div>
+              <div class="field"><label>Price (USD)</label><input type="number" id="f-price" min="0.5" step="0.25" placeholder="4.50" required></div>
+              <div class="field"><label>File formats included</label>
+                <div class="fmt-row">
+                  ${['SVG','PNG','DXF','EPS','PDF'].map(f=>`<label><input type="checkbox" value="${f}"> ${f}</label>`).join('')}
+                </div>
+              </div>
+              <div class="field"><label>Description</label><textarea id="f-desc" placeholder="What is it, and what should buyers know before cutting or printing it?"></textarea></div>
+              <div class="field"><label>Design file (zip your SVG/PNG/DXF/etc. together)</label><input type="file" id="f-file"></div>
+              <button type="submit" class="submit">Publish design</button>
+              <div id="cl-upload-error" class="error"></div>
+              <div class="note">Uploaded files are stored privately in Supabase. Automatic delivery to buyers after payment needs the Stripe step — not wired up yet.</div>
+            </form>
+          </div>
+          <div>
+            <div class="stat-row">
+              <div class="stat"><div class="num mono">${mine.length}</div><div class="label">Listings</div></div>
+              <div class="stat"><div class="num mono">${totalSales}</div><div class="label">Downloads</div></div>
+              <div class="stat"><div class="num mono">${fmt(totalEarnings)}</div><div class="label">Est. earnings (70%)</div></div>
+            </div>
+            <div class="listings-head"><h3>Your listings</h3></div>
+            <div id="cl-my-listings">
+              ${mine.length ? mine.map(m=>`
+                <div class="listing-row">
+                  <div class="sw pat-${m.pat}"></div>
+                  <div class="info">
+                    <div class="t">${m.title}</div>
+                    <div class="m">${m.category} &middot; ${m.formats.join('/')}</div>
+                  </div>
+                  <div class="price">${fmt(m.price)}</div>
+                  <button class="del" data-del="${m.id}">Remove</button>
+                </div>
+              `).join('') : `<div class="empty-box">Nothing published yet. Upload your first cut file to start selling.</div>`}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    $('#cl-signout').addEventListener('click', async ()=>{ await supabase.auth.signOut(); state.session = null; renderSell(); });
+    $('#cl-upload-form').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const title = $('#f-title').value.trim();
+      const price = parseFloat($('#f-price').value);
+      const category = $('#f-cat').value;
+      const desc = $('#f-desc').value.trim();
+      const formats = Array.from(main.querySelectorAll('.fmt-row input:checked')).map(i=>i.value);
+      const file = $('#f-file').files[0] || null;
+      const errEl = $('#cl-upload-error');
+      if(!title || !price || formats.length===0){ errEl.textContent = 'Add a title, price, and at least one file format.'; return; }
+      errEl.textContent = '';
+      try {
+        await publishListing({title, category, price, formats, desc, file});
+        renderSell();
+      } catch(err){
+        errEl.textContent = err.message || 'Something went wrong publishing that.';
+      }
+    });
+    main.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click', async ()=>{
+      await deleteListing(b.dataset.del);
+      renderSell();
+    }));
+  }
+
+  function render(){
+    if (state.view==='browse') renderBrowse();
+    else if (state.view==='product') renderProduct();
+    else if (state.view==='sell') renderSell();
+    renderCartBits();
+  }
+
+  function setNav(view, skipRender){
+    state.view = view;
+    document.querySelectorAll('#cl-nav [data-nav]').forEach(b=> b.classList.toggle('active', b.dataset.nav===view || (view==='product' && b.dataset.nav==='browse')));
+    if(!skipRender) render();
+  }
+  document.querySelectorAll('#cl-nav [data-nav]').forEach(b=> b.addEventListener('click', ()=> setNav(b.dataset.nav)));
+
+  function openCart(){ state.cartOpen = true; $('#cl-overlay').classList.add('open'); $('#cl-drawer').classList.add('open'); renderCartBits(); }
+  function closeCart(){ state.cartOpen = false; $('#cl-overlay').classList.remove('open'); $('#cl-drawer').classList.remove('open'); }
+  $('#cl-cart-open').addEventListener('click', openCart);
+  $('#cl-cart-close').addEventListener('click', closeCart);
+  $('#cl-overlay').addEventListener('click', closeCart);
+
+  function renderCartBits(){
+    const entries = Object.entries(state.cart);
+    const items = entries.map(([id,qty])=>({item: allListings().find(i=>i.id===id), qty})).filter(x=>x.item);
+    const count = items.reduce((s,x)=>s+x.qty,0);
+    $('#cl-cart-count').textContent = count;
+
+    const itemsEl = $('#cl-cart-items');
+    if(items.length===0){
+      itemsEl.innerHTML = `<div class="empty-box">Your cart is empty. Browse the library to find something to cut.</div>`;
+    } else {
+      itemsEl.innerHTML = items.map(({item,qty})=>`
+        <div class="cart-item">
+          <div class="sw pat-${item.pat}"></div>
+          <div class="ci-info">
+            <div class="ci-title">${item.title}</div>
+            <div class="ci-row">
+              <div class="qty-stepper"><button data-dec="${item.id}">&minus;</button><span>${qty}</span><button data-inc="${item.id}">+</button></div>
+              <span class="ci-price mono">${fmt(item.price*qty)}</span>
+            </div>
+            <button class="ci-remove" data-rm="${item.id}">Remove</button>
+          </div>
+        </div>
+      `).join('');
+      itemsEl.querySelectorAll('[data-inc]').forEach(b=> b.addEventListener('click', ()=> setQty(b.dataset.inc, (state.cart[b.dataset.inc]||0)+1)));
+      itemsEl.querySelectorAll('[data-dec]').forEach(b=> b.addEventListener('click', ()=> setQty(b.dataset.dec, (state.cart[b.dataset.dec]||0)-1)));
+      itemsEl.querySelectorAll('[data-rm]').forEach(b=> b.addEventListener('click', ()=> setQty(b.dataset.rm, 0)));
+    }
+
+    const subtotal = items.reduce((s,x)=>s+x.item.price*x.qty,0);
+    const creatorPayout = subtotal * 0.7;
+    const summaryEl = $('#cl-cart-summary');
+    summaryEl.innerHTML = `
+      <div class="sum-row"><span>Subtotal</span><span class="val">${fmt(subtotal)}</span></div>
+      <div class="sum-row"><span>Marketplace fee (30%, from creator payout)</span><span class="val">${fmt(subtotal-creatorPayout)}</span></div>
+      <div class="sum-row total"><span>Total due</span><span class="val">${fmt(subtotal)}</span></div>
+      <button id="cl-checkout-btn" ${items.length===0?'disabled':''}>Checkout</button>
+      <div id="cl-checkout-note">Payments aren't wired up yet — that's the Stripe step. Once connected, this button hands off to a real checkout, then unlocks downloads and pays each creator their 70% share automatically.</div>
+    `;
+    const btn = $('#cl-checkout-btn');
+    if(btn) btn.addEventListener('click', ()=>{ if(items.length===0) return; alert("Checkout isn't connected to a payment processor yet."); });
+  }
+
+  async function init(){
+    loadCart();
+    if(supabaseReady){
+      const { data } = await supabase.auth.getSession();
+      state.session = data.session || null;
+      await loadListings();
+    }
+    render();
+  }
+  init();
+})();
+</script>
